@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendrier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f5f5f7;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: white;
+        }
+
+        .header {
+            padding: 16px 24px;
+            background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .nav-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 7px 14px;
+            border: 1px solid #d1d1d6;
+            background: white;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1d1d1f;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn:hover {
+            background: #f5f5f7;
+            border-color: #007aff;
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.15);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: #007aff;
+            color: white;
+            border-color: #007aff;
+        }
+
+        .btn-primary:hover {
+            background: #0051d5;
+            border-color: #0051d5;
+        }
+
+        .current-week {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .calendar {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .time-column {
+            width: 60px;
+            background: #fafafa;
+            border-right: 1px solid #e5e5e5;
+            padding-top: 45px;
+            flex-shrink: 0;
+        }
+
+        .time-slot {
+            height: 60px;
+            padding: 6px;
+            font-size: 10px;
+            color: #86868b;
+            text-align: right;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .days-container {
+            flex: 1;
+            display: flex;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
+        .day-column {
+            flex: 1;
+            min-width: 140px;
+            border-right: 1px solid #e5e5e5;
+            position: relative;
+        }
+
+        .day-column:last-child {
+            border-right: none;
+        }
+
+        .day-header {
+            height: 45px;
+            padding: 8px;
+            background: #fafafa;
+            border-bottom: 1px solid #e5e5e5;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .day-name {
+            font-size: 10px;
+            font-weight: 600;
+            color: #86868b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .day-date {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-top: 2px;
+        }
+
+        .day-date.today {
+            background: #007aff;
+            color: white;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            border-radius: 50%;
+            margin: 2px auto 0;
+        }
+
+        .day-grid {
+            position: relative;
+            height: 660px;
+        }
+
+        .hour-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 60px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .hour-line:hover {
+            background: #f9f9fb;
+        }
+
+        .event {
+            position: absolute;
+            left: 3px;
+            right: 3px;
+            border-radius: 5px;
+            padding: 5px 7px;
+            cursor: move;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: box-shadow 0.2s ease, transform 0.1s ease;
+            border: none;
+        }
+
+        .event:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            z-index: 10;
+        }
+
+        .event.dragging {
+            opacity: 0.8;
+            transform: scale(1.02);
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .event-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .event-time {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .event-team {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 2px;
+        }
+
+        .resize-handle {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 8px;
+            cursor: ns-resize;
+            z-index: 10;
+        }
+
+        .resize-handle-top {
+            top: 0;
+        }
+
+        .resize-handle-bottom {
+            bottom: 0;
+        }
+
+        .resize-handle:hover::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 25px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 2px;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -45%) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-header {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1d1d1f;
+            margin-bottom: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #1d1d1f;
+            margin-bottom: 5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 9px 11px;
+            border: 1px solid #d1d1d6;
+            border-radius: 7px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #007aff;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 9px 11px;
+            border: 1px solid #d1d1d6;
+            border-radius: 7px;
+            font-size: 13px;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #007aff;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-cancel {
+            background: #f5f5f7;
+            color: #1d1d1f;
+            border-color: #e5e5e5;
+        }
+
+        .btn-delete {
+            background: #ff3b30;
+            color: white;
+            border-color: #ff3b30;
+        }
+
+        .btn-delete:hover {
+            background: #d62d22;
+            border-color: #d62d22;
+        }
+
+        .time-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .current-time-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #ff3b30;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .current-time-line::before {
+            content: '';
+            position: absolute;
+            left: -4px;
+            top: -3px;
+            width: 8px;
+            height: 8px;
+            background: #ff3b30;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="nav-controls">
+                <button class="btn" id="prevWeek">◀</button>
+                <button class="btn" id="today">Aujourd'hui</button>
+                <button class="btn" id="nextWeek">▶</button>
+            </div>
+            <div class="current-week" id="currentWeek"></div>
+            <button class="btn btn-primary" id="newEvent">+ Réunion</button>
+        </div>
+        <div class="calendar">
+            <div class="time-column" id="timeColumn"></div>
+            <div class="days-container" id="daysContainer"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="eventModal">
+            <div class="modal-header" id="modalTitle">Nouvelle réunion</div>
+            <form id="eventForm">
+                <div class="form-group">
+                    <label class="form-label">Objet</label>
+                    <input type="text" class="form-input" id="eventObjet" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Équipe</label>
+                    <select class="form-select" id="eventEquipe" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-input" id="eventDate" required>
+                </div>
+                <div class="time-inputs">
+                    <div class="form-group">
+                        <label class="form-label">Début</label>
+                        <input type="time" class="form-input" id="eventDebut" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fin</label>
+                        <input type="time" class="form-input" id="eventFin" required>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" id="cancelBtn">Annuler</button>
+                    <button type="button" class="btn btn-delete" id="deleteBtn" style="display: none;">Supprimer</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script>
+        let currentWeekStart = null;
+        let reservations = [];
+        let equipes = [];
+        let draggedEvent = null;
+        let dragStartY = 0;
+        let dragStartTop = 0;
+        let resizingEvent = null;
+        let resizeDirection = null;
+        let resizeStartY = 0;
+        let resizeStartHeight = 0;
+        let resizeStartTop = 0;
+        let currentEditingEvent = null;
+
+        // Configuration Grist
+        grist.ready({
+            requiredAccess: 'full',
+            columns: [
+                { name: 'objet', optional: true },
+                { name: 'debut', optional: true },
+                { name: 'fin', optional: true },
+                { name: 'equipe', optional: true },
+                { name: 'equipe.nom', optional: true },
+                { name: 'equipe.couleur', optional: true }
+            ]
+        });
+
+        // Écoute des changements dans RESERVATIONS
+        grist.onRecords(async (records) => {
+            reservations = records;
+            if (!currentWeekStart) {
+                currentWeekStart = getWeekStart(new Date());
+            }
+            await loadEquipesFromRecords(records);
+            renderCalendar();
+            updateCurrentWeekDisplay();
+            populateEquipeSelect();
+        });
+
+        // Extraire les équipes depuis les enregistrements (via les références)
+        async function loadEquipesFromRecords(records) {
+            const equipesMap = new Map();
+            
+            records.forEach(record => {
+                if (record.equipe) {
+                    // Si les colonnes référencées sont disponibles
+                    if (record['equipe.nom'] || record['equipe.couleur']) {
+                        equipesMap.set(record.equipe, {
+                            id: record.equipe,
+                            nom: record['equipe.nom'] || 'Équipe ' + record.equipe,
+                            couleur: record['equipe.couleur'] || '#007aff'
+                        });
+                    }
+                }
+            });
+            
+            // Si on n'a pas réussi à obtenir les données via les colonnes référencées,
+            // essayer avec fetchTable
+            if (equipesMap.size === 0) {
+                try {
+                    const equipesData = await grist.docApi.fetchTable('EQUIPES');
+                    equipes = equipesData.id.map((id, index) => ({
+                        id: id,
+                        nom: equipesData.nom[index],
+                        couleur: equipesData.couleur[index]
+                    }));
+                    console.log('Équipes chargées via fetchTable:', equipes);
+                } catch (error) {
+                    console.error('Erreur chargement équipes:', error);
+                    equipes = [];
+                }
+            } else {
+                equipes = Array.from(equipesMap.values());
+                console.log('Équipes chargées via références:', equipes);
+            }
+        }
+
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const result = new Date(d.setDate(diff));
+            result.setHours(0, 0, 0, 0);
+            return result;
+        }
+
+        function updateCurrentWeekDisplay() {
+            const weekEnd = new Date(currentWeekStart);
+            weekEnd.setDate(weekEnd.getDate() + 4);
+            
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            const startStr = currentWeekStart.toLocaleDateString('fr-FR', options);
+            const endStr = weekEnd.toLocaleDateString('fr-FR', options);
+            
+            document.getElementById('currentWeek').textContent = `${startStr} - ${endStr}`;
+        }
+
+        function renderCalendar() {
+            renderTimeColumn();
+            renderDays();
+            updateCurrentTimeLine();
+        }
+
+        function renderTimeColumn() {
+            const timeColumn = document.getElementById('timeColumn');
+            timeColumn.innerHTML = '';
+            
+            for (let hour = 8; hour < 19; hour++) {
+                const slot = document.createElement('div');
+                slot.className = 'time-slot';
+                slot.textContent = `${hour}h`;
+                timeColumn.appendChild(slot);
+            }
+        }
+
+        function renderDays() {
+            const daysContainer = document.getElementById('daysContainer');
+            daysContainer.innerHTML = '';
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            for (let i = 0; i < 5; i++) {
+                const date = new Date(currentWeekStart);
+                date.setDate(date.getDate() + i);
+                
+                const dayColumn = document.createElement('div');
+                dayColumn.className = 'day-column';
+                
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                
+                const dayName = document.createElement('div');
+                dayName.className = 'day-name';
+                dayName.textContent = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+                
+                const dayDate = document.createElement('div');
+                dayDate.className = 'day-date';
+                const dateOnly = new Date(date);
+                dateOnly.setHours(0, 0, 0, 0);
+                if (dateOnly.getTime() === today.getTime()) {
+                    dayDate.classList.add('today');
+                }
+                dayDate.textContent = date.getDate();
+                
+                dayHeader.appendChild(dayName);
+                dayHeader.appendChild(dayDate);
+                
+                const dayGrid = document.createElement('div');
+                dayGrid.className = 'day-grid';
+                // Stocker la date locale au format YYYY-MM-DD
+                const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                dayGrid.dataset.date = localDateStr;
+                dayGrid.dataset.year = date.getFullYear();
+                dayGrid.dataset.month = date.getMonth();
+                dayGrid.dataset.day = date.getDate();
+                
+                // Lignes d'heures
+                for (let hour = 8; hour < 19; hour++) {
+                    const hourLine = document.createElement('div');
+                    hourLine.className = 'hour-line';
+                    hourLine.style.top = `${(hour - 8) * 60}px`;
+                    hourLine.dataset.hour = hour;
+                    
+                    hourLine.addEventListener('dblclick', (e) => {
+                        if (e.target === hourLine) {
+                            createEventAtTime(date, hour);
+                        }
+                    });
+                    
+                    dayGrid.appendChild(hourLine);
+                }
+                
+                // Ajouter les événements
+                renderEventsForDay(dayGrid, date);
+                
+                dayColumn.appendChild(dayHeader);
+                dayColumn.appendChild(dayGrid);
+                daysContainer.appendChild(dayColumn);
+            }
+        }
+
+        function renderEventsForDay(dayGrid, date) {
+            // Comparer année, mois et jour directement
+            const targetYear = date.getFullYear();
+            const targetMonth = date.getMonth();
+            const targetDay = date.getDate();
+            
+            const dayReservations = reservations.filter(res => {
+                if (!res.debut) return false;
+                // Convertir en date locale
+                const resDate = new Date(res.debut);
+                
+                // Debug: afficher dans la console
+                console.log('Comparaison:', {
+                    target: `${targetYear}-${targetMonth+1}-${targetDay}`,
+                    event: `${resDate.getFullYear()}-${resDate.getMonth()+1}-${resDate.getDate()}`,
+                    eventDebut: res.debut,
+                    eventDebutParsed: resDate.toString(),
+                    match: resDate.getFullYear() === targetYear && 
+                           resDate.getMonth() === targetMonth && 
+                           resDate.getDate() === targetDay
+                });
+                
+                return resDate.getFullYear() === targetYear && 
+                       resDate.getMonth() === targetMonth && 
+                       resDate.getDate() === targetDay;
+            });
+            
+            console.log(`Rendu de ${dayReservations.length} événements pour ${date.toDateString()}`);
+            console.log('Équipes actuellement disponibles:', equipes.length, equipes);
+            
+            dayReservations.forEach(res => {
+                const eventEl = createEventElement(res);
+                dayGrid.appendChild(eventEl);
+            });
+        }
+
+        function createEventElement(reservation) {
+            // Utiliser les dates locales
+            const debut = new Date(reservation.debut);
+            const fin = new Date(reservation.fin);
+            
+            // Extraire les heures locales
+            const startHour = debut.getHours() + debut.getMinutes() / 60;
+            const endHour = fin.getHours() + fin.getMinutes() / 60;
+            
+            const top = (startHour - 8) * 60;
+            const height = Math.max((endHour - startHour) * 60, 30);
+            
+            // Chercher l'équipe par ID ou par nom (selon le type de colonne)
+            let equipe = null;
+            if (typeof reservation.equipe === 'number') {
+                // Si c'est un nombre (référence), chercher par ID
+                equipe = equipes.find(e => e.id === reservation.equipe);
+                console.log('Recherche équipe par ID:', reservation.equipe, 'trouvée:', equipe);
+            } else if (typeof reservation.equipe === 'string') {
+                // Si c'est un texte, chercher par nom
+                equipe = equipes.find(e => e.nom === reservation.equipe);
+                console.log('Recherche équipe par nom:', reservation.equipe, 'trouvée:', equipe);
+            }
+            
+            let couleur = equipe && equipe.couleur ? equipe.couleur : '#007aff';
+            
+            // Normaliser la couleur : ajouter # si absent
+            if (couleur && !couleur.startsWith('#') && !couleur.startsWith('rgb')) {
+                couleur = '#' + couleur;
+            }
+            
+            const eventEl = document.createElement('div');
+            eventEl.className = 'event';
+            eventEl.style.top = `${top}px`;
+            eventEl.style.height = `${height}px`;
+            eventEl.style.background = couleur;
+            eventEl.style.backgroundColor = couleur;
+            eventEl.style.color = 'white';
+            eventEl.dataset.id = reservation.id;
+            eventEl.dataset.couleur = couleur;
+            
+            const title = document.createElement('div');
+            title.className = 'event-title';
+            title.style.color = 'white';
+            title.textContent = reservation.objet || 'Sans titre';
+            
+            const time = document.createElement('div');
+            time.className = 'event-time';
+            time.style.color = 'rgba(255, 255, 255, 0.9)';
+            time.textContent = `${formatTime(debut)} - ${formatTime(fin)}`;
+            
+            eventEl.appendChild(title);
+            eventEl.appendChild(time);
+            
+            if (equipe) {
+                const team = document.createElement('div');
+                team.className = 'event-team';
+                team.style.color = 'rgba(255, 255, 255, 0.8)';
+                team.textContent = equipe.nom;
+                eventEl.appendChild(team);
+            }
+            
+            // Poignées de redimensionnement
+            const handleTop = document.createElement('div');
+            handleTop.className = 'resize-handle resize-handle-top';
+            const handleBottom = document.createElement('div');
+            handleBottom.className = 'resize-handle resize-handle-bottom';
+            
+            eventEl.appendChild(handleTop);
+            eventEl.appendChild(handleBottom);
+            
+            // Événements
+            eventEl.addEventListener('mousedown', startDrag);
+            eventEl.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                editEvent(reservation);
+            });
+            
+            handleTop.addEventListener('mousedown', (e) => startResize(e, reservation, 'top'));
+            handleBottom.addEventListener('mousedown', (e) => startResize(e, reservation, 'bottom'));
+            
+            return eventEl;
+        }
+
+        function startDrag(e) {
+            if (e.target.classList.contains('resize-handle')) return;
+            
+            draggedEvent = e.currentTarget;
+            dragStartY = e.clientY;
+            dragStartTop = parseInt(draggedEvent.style.top);
+            
+            // Créer un clone pour le drag
+            const clone = draggedEvent.cloneNode(true);
+            clone.style.position = 'fixed';
+            clone.style.pointerEvents = 'none';
+            clone.style.zIndex = '1000';
+            clone.style.opacity = '0.8';
+            clone.id = 'drag-clone';
+            document.body.appendChild(clone);
+            
+            draggedEvent.style.opacity = '0.3';
+            
+            // Position initiale du clone
+            updateClonePosition(e, clone);
+            
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', endDrag);
+            
+            e.preventDefault();
+        }
+
+        function updateClonePosition(e, clone) {
+            clone.style.left = `${e.clientX - 75}px`;
+            clone.style.top = `${e.clientY - 20}px`;
+            clone.style.width = '150px';
+        }
+
+        function doDrag(e) {
+            if (!draggedEvent) return;
+            
+            const clone = document.getElementById('drag-clone');
+            if (clone) {
+                updateClonePosition(e, clone);
+            }
+            
+            // Trouver la colonne de jour sous la souris
+            const dayColumns = document.querySelectorAll('.day-grid');
+            let targetDayGrid = null;
+            
+            dayColumns.forEach(grid => {
+                const rect = grid.getBoundingClientRect();
+                if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                    e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                    targetDayGrid = grid;
+                }
+            });
+            
+            if (targetDayGrid) {
+                const rect = targetDayGrid.getBoundingClientRect();
+                const relativeY = e.clientY - rect.top;
+                let newTop = relativeY - 20;
+                
+                // Contraintes (8h-19h)
+                newTop = Math.max(0, Math.min(newTop, 11 * 60 - parseInt(draggedEvent.style.height)));
+                
+                // Snap to 15 minutes
+                newTop = Math.round(newTop / 15) * 15;
+                
+                // Afficher un aperçu dans la colonne cible
+                dayColumns.forEach(grid => {
+                    const preview = grid.querySelector('.drag-preview');
+                    if (preview) preview.remove();
+                });
+                
+                const preview = document.createElement('div');
+                preview.className = 'drag-preview';
+                preview.style.position = 'absolute';
+                preview.style.left = '3px';
+                preview.style.right = '3px';
+                preview.style.top = `${newTop}px`;
+                preview.style.height = draggedEvent.style.height;
+                preview.style.border = '2px dashed #007aff';
+                preview.style.borderRadius = '5px';
+                preview.style.backgroundColor = 'rgba(0, 122, 255, 0.1)';
+                preview.style.pointerEvents = 'none';
+                targetDayGrid.appendChild(preview);
+            }
+        }
+
+        async function endDrag(e) {
+            if (!draggedEvent) return;
+            
+            document.removeEventListener('mousemove', doDrag);
+            document.removeEventListener('mouseup', endDrag);
+            
+            // Supprimer le clone
+            const clone = document.getElementById('drag-clone');
+            if (clone) clone.remove();
+            
+            // Trouver la colonne de jour cible
+            const dayColumns = document.querySelectorAll('.day-grid');
+            let targetDayGrid = null;
+            
+            dayColumns.forEach(grid => {
+                const rect = grid.getBoundingClientRect();
+                if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                    e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                    targetDayGrid = grid;
+                }
+            });
+            
+            // Nettoyer les aperçus
+            dayColumns.forEach(grid => {
+                const preview = grid.querySelector('.drag-preview');
+                if (preview) preview.remove();
+            });
+            
+            if (targetDayGrid) {
+                const rect = targetDayGrid.getBoundingClientRect();
+                const relativeY = e.clientY - rect.top;
+                let newTop = relativeY - 20;
+                
+                newTop = Math.max(0, Math.min(newTop, 11 * 60 - parseInt(draggedEvent.style.height)));
+                newTop = Math.round(newTop / 15) * 15;
+                
+                const eventId = parseInt(draggedEvent.dataset.id);
+                const reservation = reservations.find(r => r.id === eventId);
+                
+                if (reservation) {
+                    const dateStr = targetDayGrid.dataset.date;
+                    const hours = Math.floor(newTop / 60) + 8;
+                    const minutes = (newTop % 60);
+                    
+                    // Créer la date en local
+                    const [year, month, day] = dateStr.split('-');
+                    const newDebut = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), hours, minutes, 0, 0);
+                    
+                    const duration = new Date(reservation.fin) - new Date(reservation.debut);
+                    const newFin = new Date(newDebut.getTime() + duration);
+                    
+                    try {
+                        await grist.docApi.applyUserActions([
+                            ['UpdateRecord', 'RESERVATIONS', eventId, {
+                                debut: newDebut.toISOString(),
+                                fin: newFin.toISOString()
+                            }]
+                        ]);
+                    } catch (error) {
+                        console.error('Erreur mise à jour:', error);
+                        // Restaurer l'opacité en cas d'erreur
+                        draggedEvent.style.opacity = '1';
+                    }
+                }
+            } else {
+                // Pas de cible valide, restaurer l'opacité
+                draggedEvent.style.opacity = '1';
+            }
+            
+            draggedEvent = null;
+        }
+
+        function startResize(e, reservation, direction) {
+            e.stopPropagation();
+            
+            resizingEvent = e.currentTarget.parentElement;
+            resizeDirection = direction;
+            resizeStartY = e.clientY;
+            resizeStartHeight = parseInt(resizingEvent.style.height);
+            resizeStartTop = parseInt(resizingEvent.style.top);
+            
+            document.addEventListener('mousemove', doResize);
+            document.addEventListener('mouseup', endResize);
+            
+            e.preventDefault();
+        }
+
+        function doResize(e) {
+            if (!resizingEvent) return;
+            
+            const deltaY = e.clientY - resizeStartY;
+            
+            if (resizeDirection === 'bottom') {
+                let newHeight = resizeStartHeight + deltaY;
+                newHeight = Math.max(30, newHeight);
+                newHeight = Math.round(newHeight / 15) * 15;
+                resizingEvent.style.height = `${newHeight}px`;
+            } else {
+                let newTop = resizeStartTop + deltaY;
+                let newHeight = resizeStartHeight - deltaY;
+                
+                newTop = Math.max(0, newTop);
+                newHeight = Math.max(30, newHeight);
+                
+                newTop = Math.round(newTop / 15) * 15;
+                newHeight = Math.round(newHeight / 15) * 15;
+                
+                resizingEvent.style.top = `${newTop}px`;
+                resizingEvent.style.height = `${newHeight}px`;
+            }
+        }
+
+        async function endResize(e) {
+            if (!resizingEvent) return;
+            
+            document.removeEventListener('mousemove', doResize);
+            document.removeEventListener('mouseup', endResize);
+            
+            const eventId = parseInt(resizingEvent.dataset.id);
+            const reservation = reservations.find(r => r.id === eventId);
+            
+            if (reservation) {
+                const top = parseInt(resizingEvent.style.top);
+                const height = parseInt(resizingEvent.style.height);
+                
+                const dayGrid = resizingEvent.parentElement;
+                const dateStr = dayGrid.dataset.date;
+                
+                const startHours = Math.floor(top / 60) + 8;
+                const startMinutes = top % 60;
+                
+                const endHours = Math.floor((top + height) / 60) + 8;
+                const endMinutes = (top + height) % 60;
+                
+                // Créer les dates en local
+                const [year, month, day] = dateStr.split('-');
+                const newDebut = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), startHours, startMinutes, 0, 0);
+                const newFin = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), endHours, endMinutes, 0, 0);
+                
+                try {
+                    await grist.docApi.applyUserActions([
+                        ['UpdateRecord', 'RESERVATIONS', eventId, {
+                            debut: newDebut.toISOString(),
+                            fin: newFin.toISOString()
+                        }]
+                    ]);
+                } catch (error) {
+                    console.error('Erreur mise à jour:', error);
+                }
+            }
+            
+            resizingEvent = null;
+            resizeDirection = null;
+        }
+
+        function formatTime(date) {
+            const d = new Date(date);
+            return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        }
+
+        function populateEquipeSelect() {
+            const select = document.getElementById('eventEquipe');
+            select.innerHTML = '<option value="">Sélectionner une équipe</option>';
+            
+            equipes.forEach(equipe => {
+                const option = document.createElement('option');
+                // Utiliser l'ID comme valeur pour que Grist fasse la référence
+                option.value = equipe.id;
+                option.textContent = equipe.nom;
+                select.appendChild(option);
+            });
+        }
+
+        function createEventAtTime(date, hour) {
+            currentEditingEvent = null;
+            document.getElementById('modalTitle').textContent = 'Nouvelle réunion';
+            document.getElementById('deleteBtn').style.display = 'none';
+            document.getElementById('eventForm').reset();
+            
+            // Formater la date locale correctement
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            
+            console.log('Création événement à la date:', dateStr, 'date originale:', date);
+            
+            const dateInput = document.getElementById('eventDate');
+            dateInput.value = dateStr;
+            document.getElementById('eventDebut').value = `${hour.toString().padStart(2, '0')}:00`;
+            document.getElementById('eventFin').value = `${(hour + 1).toString().padStart(2, '0')}:00`;
+            
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function editEvent(reservation) {
+            currentEditingEvent = reservation;
+            document.getElementById('modalTitle').textContent = 'Modifier la réunion';
+            document.getElementById('deleteBtn').style.display = 'block';
+            
+            const debut = new Date(reservation.debut);
+            const fin = new Date(reservation.fin);
+            
+            // Formatter la date locale
+            const dateStr = `${debut.getFullYear()}-${String(debut.getMonth() + 1).padStart(2, '0')}-${String(debut.getDate()).padStart(2, '0')}`;
+            
+            document.getElementById('eventObjet').value = reservation.objet || '';
+            
+            // Gérer l'équipe : peut être un ID (number) ou un nom (string)
+            let equipeValue = '';
+            if (typeof reservation.equipe === 'number') {
+                equipeValue = reservation.equipe;
+            } else if (typeof reservation.equipe === 'string') {
+                // Si c'est un nom, trouver l'ID correspondant
+                const equipe = equipes.find(e => e.nom === reservation.equipe);
+                equipeValue = equipe ? equipe.id : '';
+            }
+            
+            console.log('Edition événement:', {
+                reservationEquipe: reservation.equipe,
+                type: typeof reservation.equipe,
+                equipeValue: equipeValue
+            });
+            
+            document.getElementById('eventEquipe').value = equipeValue;
+            document.getElementById('eventDate').value = dateStr;
+            document.getElementById('eventDebut').value = formatTime(debut);
+            document.getElementById('eventFin').value = formatTime(fin);
+            
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        async function saveEvent(e) {
+            e.preventDefault();
+            
+            const objet = document.getElementById('eventObjet').value;
+            const equipeValue = document.getElementById('eventEquipe').value;
+            const dateStr = document.getElementById('eventDate').value;
+            const debutTime = document.getElementById('eventDebut').value;
+            const finTime = document.getElementById('eventFin').value;
+            
+            // Convertir l'ID en nombre
+            let equipeId = null;
+            if (equipeValue && equipeValue !== '') {
+                equipeId = parseInt(equipeValue, 10);
+                if (isNaN(equipeId)) {
+                    alert('Erreur : ID équipe invalide');
+                    return;
+                }
+            }
+            
+            console.log('Sauvegarde événement:', {
+                objet: objet,
+                equipeValue: equipeValue,
+                equipeId: equipeId,
+                equipeIdType: typeof equipeId
+            });
+            
+            // Créer les dates en local pour éviter les problèmes de fuseau horaire
+            const [year, month, day] = dateStr.split('-');
+            const [debutHours, debutMinutes] = debutTime.split(':');
+            const [finHours, finMinutes] = finTime.split(':');
+            
+            const debut = new Date(
+                parseInt(year), 
+                parseInt(month) - 1, 
+                parseInt(day), 
+                parseInt(debutHours), 
+                parseInt(debutMinutes), 
+                0, 
+                0
+            );
+            
+            const fin = new Date(
+                parseInt(year), 
+                parseInt(month) - 1, 
+                parseInt(day), 
+                parseInt(finHours), 
+                parseInt(finMinutes), 
+                0, 
+                0
+            );
+            
+            const recordData = {
+                objet: objet,
+                debut: debut.toISOString(),
+                fin: fin.toISOString()
+            };
+            
+            // N'ajouter equipe que si un ID valide est fourni
+            if (equipeId !== null) {
+                recordData.equipe = equipeId;
+            }
+            
+            console.log('Données à envoyer:', recordData);
+            
+            try {
+                if (currentEditingEvent) {
+                    await grist.docApi.applyUserActions([
+                        ['UpdateRecord', 'RESERVATIONS', currentEditingEvent.id, recordData]
+                    ]);
+                } else {
+                    await grist.docApi.applyUserActions([
+                        ['AddRecord', 'RESERVATIONS', null, recordData]
+                    ]);
+                }
+                
+                closeModal();
+            } catch (error) {
+                console.error('Erreur sauvegarde:', error);
+                alert('Erreur lors de la sauvegarde: ' + error.message);
+            }
+        }
+
+        async function deleteEvent() {
+            if (!currentEditingEvent) return;
+            
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette réunion ?')) return;
+            
+            try {
+                await grist.docApi.applyUserActions([
+                    ['RemoveRecord', 'RESERVATIONS', currentEditingEvent.id]
+                ]);
+                
+                closeModal();
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                alert('Erreur lors de la suppression');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            currentEditingEvent = null;
+        }
+
+        function updateCurrentTimeLine() {
+            const now = new Date();
+            const hours = now.getHours() + now.getMinutes() / 60;
+            
+            if (hours >= 8 && hours < 19) {
+                const top = (hours - 8) * 60;
+                
+                document.querySelectorAll('.day-grid').forEach(grid => {
+                    const existing = grid.querySelector('.current-time-line');
+                    if (existing) existing.remove();
+                    
+                    const dateStr = grid.dataset.date;
+                    const gridDate = new Date(dateStr);
+                    const today = new Date();
+                    
+                    if (gridDate.toDateString() === today.toDateString()) {
+                        const line = document.createElement('div');
+                        line.className = 'current-time-line';
+                        line.style.top = `${top}px`;
+                        grid.appendChild(line);
+                    }
+                });
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('prevWeek').addEventListener('click', () => {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            updateCurrentWeekDisplay();
+            renderCalendar();
+        });
+
+        document.getElementById('nextWeek').addEventListener('click', () => {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            updateCurrentWeekDisplay();
+            renderCalendar();
+        });
+
+        document.getElementById('today').addEventListener('click', () => {
+            currentWeekStart = getWeekStart(new Date());
+            updateCurrentWeekDisplay();
+            renderCalendar();
+        });
+
+        document.getElementById('newEvent').addEventListener('click', () => {
+            createEventAtTime(new Date(), 9);
+        });
+
+        document.getElementById('eventForm').addEventListener('submit', saveEvent);
+        document.getElementById('cancelBtn').addEventListener('click', closeModal);
+        document.getElementById('deleteBtn').addEventListener('click', deleteEvent);
+
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closeModal();
+            }
+        });
+
+        // Mise à jour ligne de temps toutes les minutes
+        setInterval(updateCurrentTimeLine, 60000);
+    </script>
+</body>
+</html>
